@@ -1,7 +1,7 @@
-/*
- * SunSpotApplication.java
- *
- * Created on Oct 12, 2011 3:01:12 PM;
+/**
+ * Erik Reed
+ * Carnegie Mellon University
+ * 12/12/11
  */
 package org.sunspotworld;
 
@@ -29,11 +29,8 @@ import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 
 /**
- * The startApp method of this class is called by the VM to start the
- * application.
- * 
- * The manifest specifies this class as MIDlet-1, which means it will
- * be selected for execution.
+ * Point to Location Framework (PTLoc) -- Mount Device
+ * @author Erik Reed
  */
 public class Mount extends MIDlet implements ISwitchListener {
 
@@ -43,11 +40,6 @@ public class Mount extends MIDlet implements ISwitchListener {
     public static final int[] GREEN = new int[]{0, 128, 0}; // minute
     public static final int[] GOLD = new int[]{255, 215, 0}; // second
     public static final int[] RED = new int[]{255, 0, 0}; // error color
-//    private static final int SERVO_CENTER_VALUE = 1500;
-//    private static final int SERVO_MAX_VALUE = 2000;
-//    private static final int SERVO_MIN_VALUE = 1000;
-//    private static final int SERVO_HIGH = 500;
-//    private static final int SERVO_LOW = 300;
     public static final byte[] CMD_MEASURE = hexStringToByteArray("0031");
     public static final byte[] CMD_CAL_START = hexStringToByteArray("00C0");
     public static final byte[] CMD_CAL_END = hexStringToByteArray("00C1");
@@ -87,6 +79,11 @@ public class Mount extends MIDlet implements ISwitchListener {
     private double receivedTilt2 = -1;
     private boolean moving = false;
 
+    /**
+     * Returns the hex string as byte array.
+     * @param s String to translate.
+     * @return Byte array
+     */
     public static byte[] hexStringToByteArray(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];
@@ -97,6 +94,10 @@ public class Mount extends MIDlet implements ISwitchListener {
         return data;
     }
 
+    /**
+     * Runs the Mount
+     * @throws MIDletStateChangeException 
+     */
     protected void startApp() throws MIDletStateChangeException {
         System.out.println("Running mount.\n");
         BootloaderListenerService.getInstance().start();   // monitor the USB (if connected) and recognize commands from host
@@ -264,7 +265,7 @@ public class Mount extends MIDlet implements ISwitchListener {
     }
 
     /**
-     * Fires if in set time mode and one of the switches was pressed.
+     * Used to manually move the servos
      * @param se Switch event.
      */
     public void switchPressed(SwitchEvent se) {
@@ -284,7 +285,6 @@ public class Mount extends MIDlet implements ISwitchListener {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
 
         if (se.getSwitch().equals(sw1)) {
             while (sw1.isClosed()) {
@@ -338,6 +338,11 @@ public class Mount extends MIDlet implements ISwitchListener {
         }
     }
 
+    /**
+     * Gets the angle via compass module
+     * @return Compass angle
+     * @throws IOException if compass failure
+     */
     private double getAngle() throws IOException {
         byte[] data = new byte[8];
 
@@ -351,13 +356,14 @@ public class Mount extends MIDlet implements ISwitchListener {
         lowerAngle = 0xFF & data[4];
         // unused
         //int declinationAngle = (upperAngle << 8) + lowerAngle;
-        //TODO: note angle incremented 90
-//        angle /= 10;
-//        angle += 90;
-//        angle = checkAngle(angle);
         return angle/10;
     }
 
+    /**
+     * Returns a valid angle in [0 360]
+     * @param x
+     * @return Valid angle
+     */
     private double checkAngle(double x) {
         if (x > 360) {
             return x % 360;
@@ -365,8 +371,12 @@ public class Mount extends MIDlet implements ISwitchListener {
         return x >= 0 ? x : x + 360;
     }
 
+    /**
+     * Returns the average angle
+     * @return Angle
+     * @throws IOException 
+     */
     private double getAvgAngle() throws IOException {
-        //double[] angles = new double[num];
         for (int i = 0; i < 2; i++) {
             getAngle();
         }
@@ -399,6 +409,12 @@ public class Mount extends MIDlet implements ISwitchListener {
         1.469142265488490, 1.570796326794897, 1.570796326794897, 1.570796326794897};
     // +/- .03 radian accuracy
 
+    /**
+     * Uses lookup table for asin due to Java ME limitations
+     * @param x
+     * @return asin(x)
+     * @throws IllegalArgumentException if result is imaginary
+     */
     private double asin(double x) throws IllegalArgumentException {
         int n = (int) Math.floor(Math.toDegrees(x));
         
@@ -412,6 +428,15 @@ public class Mount extends MIDlet implements ISwitchListener {
         }
     }
 
+    /**
+     * Calculate theta3, unknown of side-angle-side triangle using law of
+     * cosines and law of sines.
+     * @param d1 Distance1
+     * @param d2 Distance2
+     * @param a1 Angle1
+     * @param a2 Angle2
+     * @return Calculated angle3
+     */
     public double calcAngle3(double d1, double d2,double a1, double a2) {
 
         double diff = Math.abs(a1 - a2);
@@ -446,6 +471,15 @@ public class Mount extends MIDlet implements ISwitchListener {
         return checkAngle(ret);
     }
 
+    /**
+     * Calculate theta3, unknown of side-angle-side triangle using law of
+     * cosines and law of sines.
+     * @param d1 Distance1
+     * @param d2 Distance2
+     * @param a1 Angle1
+     * @param a2 Angle2
+     * @return Calculated tilt3
+     */
     public double calcTilt3(double d1, double d2, double a1, double a2)  {
 
         a1 *= 180;
@@ -468,17 +502,20 @@ public class Mount extends MIDlet implements ISwitchListener {
             a4 = 180 - Math.abs(temp + Math.toDegrees(diff));
         }
         
-        //a4 /= 180;
-        //a4 = Math.toRadians(a4);
         a1 = Math.toDegrees(a1);
         double a3 = a4 - a1;
         a3 /= 180;
         System.out.println("a4: " + a4 + "\ta1: " + a1 + "a3: " + a3);
         
         return a3;
-        //return a3;
     }
 
+    /**
+     * Calculate optimal way to turn to new angle -- shortest distance
+     * @param a2 angle1
+     * @param a1 angle2
+     * @return Optimal angle difference
+     */
     private double angleDiff(double a2, double a1) {
         double d1 = 360 - a2 + a1;
         double d2 = a2 - a1;
@@ -505,6 +542,11 @@ public class Mount extends MIDlet implements ISwitchListener {
             return min2;
     }
 
+    /**
+     * Move the Mount to new angle
+     * @param goal_angle New angle
+     * @throws IOException if compass error
+     */
     private void gotoAngle(double goal_angle) throws IOException {
         if (goal_angle < 0 || goal_angle > 360) 
             throw new Error("Bad angle: " + goal_angle);
@@ -528,8 +570,6 @@ public class Mount extends MIDlet implements ISwitchListener {
             servo1.setPosition(pServo1);
 
             if (Math.abs(pServo1) >= 1) {
-//                pServo2 = pServo2 > 0 ? 1: -1;
-//                servo2.setPosition(pServo1);
                 System.err.println("pServo1 value magnitude too high in angle set: " + pServo1);
                 resetServos();
                 break;
@@ -539,10 +579,13 @@ public class Mount extends MIDlet implements ISwitchListener {
         }
         System.out.println("Done w/ angle\ncurrent angle: " + currentAngle + "\tDiff: "
                 + angle_diff + "\tpServo1: " + pServo1 + '\n');
-
-
     }
 
+    /**
+     * Move the mount to tilt
+     * @param goal_tilt New tilt
+     * @throws IOException 
+     */
     public void gotoTilt(double goal_tilt) throws IOException {
         // increasing servo2 -> increasing tilt
         // using an upward tilt to mean:
@@ -569,8 +612,6 @@ public class Mount extends MIDlet implements ISwitchListener {
             servo2.setPosition(pServo2);
 
             if (Math.abs(pServo2) >= 1) {
-//                pServo2 = pServo2 > 0 ? 1: -1;
-//                servo2.setPosition(pServo2);
                 System.err.println("pServo2 value magnitude too high in tilt set: " + pServo2);
                 resetServos();
                 break;
@@ -582,13 +623,23 @@ public class Mount extends MIDlet implements ISwitchListener {
                 + tilt_diff + "\tpServo2: " + pServo2);
     }
 
-    private void gotoLocation(double goal_tilt, double goal_angle) throws IOException {
+    /**
+     * Directs the mount to a desire tilt and angle.
+     * @param goal_tilt New tilt
+     * @param goal_angle New angle
+     * @throws IOException if communication failure between 
+     *      either compass or distance meter
+     */
+    public void gotoLocation(double goal_tilt, double goal_angle) throws IOException {
         if (USE_COMPASS) {
             gotoAngle(goal_angle);
         }
         gotoTilt(goal_tilt);
     }
 
+    /**
+     * Reset servos to default position
+     */
     public void resetServos() {
         System.out.println("Resetting servo positions.");
         flashAllLEDs(RED, 750);
@@ -599,3 +650,4 @@ public class Mount extends MIDlet implements ISwitchListener {
         servo2.setPosition(pServo2);
     }
 }
+

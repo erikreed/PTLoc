@@ -1,9 +1,9 @@
-/*
- * Mount.java
- *
- * Created on Oct 4, 2011 2:06:44 PM;
+/**
+ * Erik Reed
+ * Carnegie Mellon University
+ * 12/12/11
  */
-package org.sunspotworld;
+package org.cmu;
 
 import com.sun.spot.peripheral.II2C;
 import com.sun.spot.peripheral.radio.RadioFactory;
@@ -26,11 +26,15 @@ import javax.microedition.io.StreamConnection;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 
+/**
+ * Point to Location Framework (PTLoc) -- Pointer Device
+ * @author Erik Reed
+ */
 public class Pointer extends MIDlet implements ISwitchListener {
 
-    public static final int[] LIGHT_BLUE = new int[]{100, 100, 100}; //hour color
-    public static final int[] GREEN = new int[]{0, 128, 0}; // minute
-    public static final int[] GOLD = new int[]{255, 215, 0}; // second
+    public static final int[] LIGHT_BLUE = new int[]{100, 100, 100}; 
+    public static final int[] GREEN = new int[]{0, 128, 0}; 
+    public static final int[] GOLD = new int[]{255, 215, 0}; 
     public static final int[] RED = new int[]{255, 0, 0}; // error color
     public static final boolean MOUNT = false;
     public static final String DEST_IEEE = "0014.4F01.0000.267D:100"; //B5
@@ -61,6 +65,11 @@ public class Pointer extends MIDlet implements ISwitchListener {
     private IAccelerometer3D acc;
     private boolean sendingMessage = false;
 
+    /**
+     * Returns the hex string as byte array.
+     * @param s String to translate.
+     * @return Byte array
+     */
     public static byte[] hexStringToByteArray(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];
@@ -71,19 +80,21 @@ public class Pointer extends MIDlet implements ISwitchListener {
         return data;
     }
 
+    /**
+     * Runs Pointer
+     * @throws MIDletStateChangeException 
+     */
     protected void startApp() throws MIDletStateChangeException {
         board = EDemoBoard.getInstance();
         D1 = board.getIOPins()[EDemoBoard.D1];
         D0 = board.getIOPins()[EDemoBoard.D0];
         acc = (IAccelerometer3D) Resources.lookup(IAccelerometer3D.class);
-        
+
         System.out.println("Running pointer!");
         BootloaderListenerService.getInstance().start();   // monitor the USB (if connected) and recognize commands from host
 
         long ourAddr = RadioFactory.getRadioPolicyManager().getIEEEAddress();
         System.out.println("radio address = " + IEEEAddress.toDottedHex(ourAddr));
-
-        //IDemoBoard board = (IDemoBoard)Resources.lookup(IDemoBoard.class);
 
         try {
             StreamConnection conn = (StreamConnection) Connector.open(
@@ -102,7 +113,7 @@ public class Pointer extends MIDlet implements ISwitchListener {
 
             if (DO_CALIBRATE) {
                 calibrate();
-                notifyDestroyed(); 
+                notifyDestroyed();
                 i2c.close();
                 out.close();
                 return;
@@ -127,14 +138,13 @@ public class Pointer extends MIDlet implements ISwitchListener {
             System.err.println(e);
             flashAllLEDs(RED, 1000);
             e.printStackTrace();
-        }
-        finally {
+        } finally {
             notifyDestroyed();                      // cause the MIDlet to exit
         }
     }
 
     /**
-     * Fires if in set time mode and one of the switches was pressed.
+     * Sends data to the Mount. Switch 2 triggers movement.
      * @param se Switch event.
      */
     public void switchPressed(SwitchEvent se) {
@@ -152,8 +162,8 @@ public class Pointer extends MIDlet implements ISwitchListener {
                 double angle = getAvgAngle();
                 double tilt = acc.getTiltY();
                 System.out.println("Switch 1 pressed. Sending:");
-                System.out.println("Type=1\t d1=" + dist + "\t angle1=" + angle + 
-                        "\ttilt: " + tilt);
+                System.out.println("Type=1\t d1=" + dist + "\t angle1=" + angle
+                        + "\ttilt: " + tilt);
                 flashAllLEDs(LIGHT_BLUE, 250);
                 out.write(1); // 1 == set mount distance
                 out.writeDouble(dist);
@@ -191,8 +201,7 @@ public class Pointer extends MIDlet implements ISwitchListener {
         } catch (IOException e) {
             e.printStackTrace();
             flashAllLEDs(RED, 1000);
-        }
-        finally {
+        } finally {
             sendingMessage = false;
         }
     }
@@ -209,22 +218,12 @@ public class Pointer extends MIDlet implements ISwitchListener {
 
     protected void destroyApp(boolean unconditional) throws MIDletStateChangeException {
     }
-
-//    private void TestDist(ITriColorLED led, int get, int set) {
-//        System.out.println("set pulse: " + set + "us, get pulse: " + get + "us");
-//        for (int i = 0; i < 10; i++) {
-//            led.setOn();
-//            int dist = getDistance(set, get);
-//            System.out.print("dist: " + dist);
-//            System.out.println("\tdist/148: " + dist / 148.0);
-//            Utils.sleep(350);
-//            led.setOff();
-//            Utils.sleep(350);
-//        }
-//    }
-    //start = 1us
-    //get = 50us is fine
-    int getDistance() {
+    
+    /**
+     * Gets distance.
+     * @return Distance. Divide by 148 to get inches.
+     */
+    private int getDistance() {
         board.startPulse(D1, true, DISTANCE_TRIGGER_TIMEOUT);
         int ptime = board.getPulse(D0, true, DISTANCE_ECHO_TIMEOUT);
         while (ptime == 0) {
@@ -233,10 +232,13 @@ public class Pointer extends MIDlet implements ISwitchListener {
             ptime = board.getPulse(D0, true, DISTANCE_ECHO_TIMEOUT);
         }
         return ptime;
-        //return 1130 * 12 * ptime / (2 * 1000000); 
     }
-
-    private void calibrate() throws java.io.IOException {
+    
+    /**
+     * Calibrates the compass module.
+     * @throws IOException when compass not plugged in.
+     */
+    private void calibrate() throws IOException {
         i2c.write(0xE0, CMD_CAL_START, 0, 2);
         System.out.println("Calibrating...");
         Utils.sleep(CALIBRATION_TIME_MS); // 2 minutes
@@ -244,12 +246,12 @@ public class Pointer extends MIDlet implements ISwitchListener {
         System.out.println("Calibrating complete...");
     }
 
-//    read(int slaveAddress, byte[] data, int off, int len) 
-//          Read data from the specified I2C slave device.
-//    write(int slaveAddress, byte[] data, int off, int len) 
-//          Write data to the specified I2C slave device.
-    //default factory address = 0xE0
-    private double getAngle() throws java.io.IOException {
+    /**
+     * Retrieves compass angle.
+     * @return Compass angle.
+     * @throws IOException if compass communication failure.
+     */
+    private double getAngle() throws IOException {
         // byte layout --
         //        0x0D
         //        0x0A
@@ -264,19 +266,6 @@ public class Pointer extends MIDlet implements ISwitchListener {
         i2c.write(I2C_ADDRESS, CMD_MEASURE, 0, 2);
         i2c.read(I2C_ADDRESS, data, 0, 8);
 
-//        for (int i = 0; i < data.length; i++) {
-//            System.out.print(data[i] + " ");
-//        }
-//
-//        System.out.println();
-        // val 1-3
-//        byte angle_hundreds = (byte) (data[2] - 0x30);
-//        
-//        //vals 1-9
-//        byte angle_tens = (byte) (data[3] - 0x30);
-//        byte angle_bit = (byte) (data[4] - 0x30);
-//        int angle = angle_hundreds*100 + angle_tens*10
-//                + angle_bit;
         int upperAngle = 0xFF & data[1];
         int lowerAngle = 0xFF & data[2];
         double angle = (upperAngle << 8) + lowerAngle;
@@ -286,15 +275,22 @@ public class Pointer extends MIDlet implements ISwitchListener {
         //int declinationAngle = (upperAngle << 8) + lowerAngle;
         angle /= 10.0;
         angle -= 90;
-        if (angle < 0)
+        if (angle < 0) {
             angle += 360;
+        }
         return angle;
     }
 
+    /**
+     * Gets the average compass angle of NUM_AVG_READINGS samples.
+     * @return Average compass angle.
+     * @throws IOException if compass communication failure.
+     */
     private double getAvgAngle() throws IOException {
         //double[] angles = new double[num];
-        for (int i=0; i<2; i++)
+        for (int i = 0; i < 2; i++) {
             getAngle();
+        }
         double sum = 0;
         double min = Double.MAX_VALUE;
         for (int i = 0; i < NUM_AVG_READINGS; i++) {
@@ -303,9 +299,14 @@ public class Pointer extends MIDlet implements ISwitchListener {
             min = Math.min(min, angle);
         }
         sum -= min;
-        return sum / (NUM_AVG_READINGS-1);
+        return sum / (NUM_AVG_READINGS - 1);
     }
 
+    /**
+     * Gets the average distance of NUM_AVG_READINGS samples.
+     * @return Average distance
+     * @throws IOException If distance meter failure.
+     */
     private double getAvgDist() throws IOException {
         //double[] angles = new double[num];
         int sum = 0;
@@ -331,3 +332,4 @@ public class Pointer extends MIDlet implements ISwitchListener {
         }
     }
 }
+
