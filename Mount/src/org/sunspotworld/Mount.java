@@ -3,7 +3,7 @@
  * Carnegie Mellon University
  * 12/12/11
  */
-package org.sunspotworld;
+package org.cmu;
 
 import com.sun.spot.peripheral.II2C;
 import com.sun.spot.peripheral.radio.RadioFactory;
